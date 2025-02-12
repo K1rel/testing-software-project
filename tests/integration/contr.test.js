@@ -49,6 +49,11 @@ describe('Integration Tests', () => {
         ['Test Product', 99.99, 'Test Description', 10]
       );
       testProduct = { id: productResult.insertId };
+
+      await connection.execute(
+        'INSERT INTO images (product_id, path) VALUES (?, ?)',
+        [testProduct.id, '/home/k1rel/finki_7_semester/skit/node.js_eCommerce_MVC-master/public/img/products/prod-8/prod-8-1.jpg']
+      );
     } catch (error) {
       console.error('Setup error:', error);
       throw error;
@@ -153,6 +158,22 @@ describe('Integration Tests', () => {
   });
 
   describe('PublicController Tests', () => {
+    
+  
+    describe('GET /', () => {
+      it('should render the homepage with the test product', async () => {
+        const response = await request(app)
+          .get('/')
+          .set('Cookie', cookies)
+          .set('Accept', 'text/html');
+
+        expect(response.status).toBe(200);
+        expect(response.text).toContain('Test Product'); 
+        expect(response.text).toContain('Test Description'); 
+      });
+
+    });
+
     describe('POST /cart/addToCart', () => {
       it('should add product to cart successfully', async () => {
         const response = await request(app)
