@@ -1,0 +1,9 @@
+{
+    "node-option": [
+      "experimental-vm-modules",
+      "no-warnings"
+    ],
+    "spec": "tests/integration/**/*.js",
+    "timeout": 10000,
+    "exit": true
+  }

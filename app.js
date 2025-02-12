@@ -1,0 +1,129 @@
+// Import native 'node.js' modules
+import path from "path";
+
+// Import dependencies
+import express from "express";
+import expressLayouts from "express-ejs-layouts";
+import {} from "dotenv/config.js";
+import helmet from "helmet";
+import flash from "connect-flash";
+import csrf from 'csurf';
+import session from 'express-session';
+import cookieParser from 'cookie-parser';
+import passport from "passport";
+import MySQLSession from "express-mysql-session";
+
+// Import constants from own file 'app-config.js'
+import {
+  APP_PORT,
+  VIEWS,
+  options,
+  cookie
+} from "./src/config/app-config.js";
+
+let MySQLStore = MySQLSession(session);
+let sessionStore = new MySQLStore(options);
+
+const app = express();
+
+// Helmet middleware
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+  })
+);
+
+// Passport config
+import defaultExport from "./src/config/passport.js";
+defaultExport(passport);
+
+// Allow "public" folder to serve static files
+app.use(express.static('public'));
+// Allow Bootstrap
+app.use("/styles/css", express.static(path.resolve(process.cwd(), "node_modules/bootstrap/dist/css")));
+app.use("/js", express.static(path.resolve(process.cwd(), "node_modules/bootstrap/dist/js")));
+// Allow jQuery
+app.use("/js", express.static(path.resolve(process.cwd(), "node_modules/jquery/dist")));
+
+// Body parser
+app.use(express.urlencoded({ extended: false }));
+
+// Cookie parser
+app.use(cookieParser());
+
+// Express session
+app.use(session({
+  key: cookie.name,
+  secret: cookie.secret,
+  store: sessionStore,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    maxAge: 1000 * 60 * 60 * 24 // 24 hours
+  }
+}));
+
+// CSRF protection (disable in test environment)
+if (process.env.NODE_ENV !== 'test') {
+  const csrfProtection = csrf({ cookie: true });
+  app.use(csrfProtection);
+
+  app.use((req, res, next) => {
+    res.locals.csrfToken = req.csrfToken(); // Add CSRF token to all views
+    next();
+  });
+}
+
+// Passport middleware
+app.use(passport.initialize());
+app.use(passport.session());
+
+// Connect flash
+app.use(flash());
+
+// Global variables
+app.use((req, res, next) => {
+  res.locals.success_msg = req.flash('success_msg');
+  res.locals.error_msg = req.flash('error_msg');
+  res.locals.warning_msg = req.flash('warning_msg');
+  res.locals.error = req.flash('error');
+  next();
+});
+
+// EJS configuration
+
+// Set path to folder 'views'
+app.set('views', VIEWS);
+
+// Set templating engine
+app.use(expressLayouts);
+app.set('view engine', 'ejs');
+
+// Set main layout file
+app.set('layout', path.resolve(VIEWS, "public", "layouts", "layout-main.ejs"));
+
+// Routes
+import { router as router_public } from "./src/routes/public.js";
+import { router as router_user } from "./src/routes/user.js";
+import { router as router_dashboard } from "./src/routes/dashboard.js";
+
+app.use("/", router_public);
+app.use("/user", router_user);
+app.use("/dashboard", router_dashboard);
+
+// 404 Error page
+app.use((req, res) => {
+  res.status(404).render(path.resolve(VIEWS, "404.ejs"), {
+    title: "Error",
+    layout: "./public/layouts/layout-user"
+  });
+});
+
+app.listen(APP_PORT, () => {
+  console.log(`Server started on port ${APP_PORT}...`);
+});
+
+export { app };
