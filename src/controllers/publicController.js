@@ -43,7 +43,7 @@ export class PublicController {
         }
       )
     } catch(e) {
-      throw e;
+      res.status(500).send(e.message); 
     }
   }
 

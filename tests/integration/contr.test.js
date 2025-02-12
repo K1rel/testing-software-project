@@ -172,7 +172,24 @@ describe('Integration Tests', () => {
         expect(response.text).toContain('Test Description'); 
       });
 
-    });
+      it('should handle errors gracefully when no products are found', async () => {
+      
+        await connection.execute('SET FOREIGN_KEY_CHECKS = 0'); 
+    await connection.execute('TRUNCATE TABLE images'); 
+    await connection.execute('TRUNCATE TABLE products'); 
+    await connection.execute('SET FOREIGN_KEY_CHECKS = 1'); 
+
+  
+    const response = await request(app)
+      .get('/')
+      .set('Accept', 'text/html');
+
+   
+    expect(response.status).toBe(500); 
+    expect(response.text).toContain('No results found in the database'); 
+
+      });
+    }, 60000);
 
     describe('POST /cart/addToCart', () => {
       it('should add product to cart successfully', async () => {
